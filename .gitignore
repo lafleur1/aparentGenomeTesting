@@ -190,3 +190,6 @@ venv.bak/
 
 #No temp
 *~
+
+#ignoring .fasta files
+*.fasta
