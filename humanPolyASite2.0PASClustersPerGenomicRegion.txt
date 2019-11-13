@@ -1,0 +1,92 @@
+Region name   Number Clusters
+1             51384
+2             45727
+3             37482
+5             34472
+6             34191
+4             32401
+7             29972
+12            29493
+11            26241
+10            25307
+8             25288
+17            22489
+9             22409
+X             20960
+19            18764
+14            18644
+15            18204
+16            16905
+13            16149
+20            12809
+18            12704
+22            8631 
+21            6911 
+Y             951  
+9             120  
+GL000219.1    44	done
+GL000205.2    38	done   
+KI270733.1    36	done   
+KI270706.1    20	done   
+KI270728.1    19   r	done
+GL000009.2    16   r	done
+KI270744.1    15   r	done
+GL000195.1    15   r	done
+GL000218.1    15   r	done
+GL000194.1    14   	done
+KI270742.1    11   r	done	
+KI270467.1    9    r	done
+KI270726.1    9    r	done
+KI270750.1    9    r	done
+KI270442.1    9    r	done
+KI270713.1    8    r	done
+GL000008.2    8    r	done
+KI270729.1    6    r	done
+KI270722.1    5    r	done
+KI270749.1    4    r	done
+KI270743.1    4    r	done
+KI270714.1    4    r	done
+GL000224.1    4    r	done
+KI270720.1    4    r	done
+GL000225.1    3    r	done
+GL000220.1    3    r	done
+KI270724.1    3    r	done
+KI270711.1    3    r	done
+KI270719.1    3    r	done
+KI270735.1    3    r	done
+KI270712.1    3    r	done
+KI270466.1    3    	done
+GL000221.1    3    r	done
+KI270725.1    2    r	done
+KI270707.1    2    r	done
+GL000216.2    2    r	done
+KI270734.1    2    r	done
+KI270754.1    2    r	done
+KI270736.1    2    r	done	
+KI270751.1    2    r	done
+KI270732.1    2    r	done
+KI270753.1    2    r	done
+KI270752.1    2    r	done
+GL000213.1    2    r	done
+KI270582.1    1    r	done
+KI270748.1    1    r	done	
+KI270333.1    1    r	done
+KI270330.1    1    r	done
+KI270435.1    1    r	done
+KI270723.1    1    r	done
+GL000208.1    1    r	done
+KI270717.1    1    r	done
+KI270747.1    1    r	done
+KI270517.1    1    r	done
+KI270731.1    1    r	done
+GL000214.1    1    r	done
+KI270708.1    1    r	done
+KI270709.1    1    r	done
+KI270591.1    1    r	done
+KI270746.1    1    r	done
+KI270519.1    1    r	done
+KI270727.1    1    
+KI270738.1    1    
+KI270737.1    1    
+KI270418.1    1    
+KI270587.1    1    
