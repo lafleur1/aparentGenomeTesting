@@ -32,10 +32,10 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 
 #setting up files
 fastaDestination = "../fastas/"
-fastaNames = ["CM000663.2"]
+fastaNames = ["KI270747.1"]
 predDestination = "../PredictionBinaries/"
-#strideSizes = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,45,50]
-strideSizes = [10]
+strideSizes = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,45,50]
+#strideSizes = [10]
 
 #running files
 for name in fastaNames:
@@ -44,6 +44,8 @@ for name in fastaNames:
     print ("PREDICTING ", contigSeq.id, " with length ", len(seq))
     for stride in strideSizes:
             print ("Stride length is: ", stride)
+            endTime = datetime.datetime.now()
+            print(endTime)
             repPeriod = name.replace(".", "_")
             filename = predDestination + name + "Predictions/" +repPeriod + "_cutPredsStrideLen" + str(stride)
             if not os.path.exists(os.path.dirname(filename)):
@@ -68,6 +70,7 @@ for name in fastaNames:
     print ("FINISHED")
 
 # Print timing info
+print ("PREDICTED ", contigSeq.id, " with length ", len(seq))
 print("Timing info:")
 endTime=datetime.datetime.now()
 timeElapsed = endTime-startTime
