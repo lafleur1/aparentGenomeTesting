@@ -70,7 +70,7 @@ for name in fastaNames:
     print ("FINISHED")
 
 # Print timing info
-print ("PREDICTED ", contigSeq.id, " with length ", len(seq))
+#print ("PREDICTED ", str(fastaNames), " with length ", len(seq))
 print("Timing info:")
 endTime=datetime.datetime.now()
 timeElapsed = endTime-startTime
