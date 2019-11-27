@@ -304,6 +304,46 @@ def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequenc
 	return peak_ixs.tolist(), avg_cut_pred
 
 
+
+#this version will run along longer sequences, exporting completed prediction regions as it goes.
+#that way it will have optimal coverage for a greater portion of the genome
+def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, sequence_stride=10, exportSize = 100000, filePath) :
+    #exports (empty array)
+	sumCutPreds = np.zeros(0)
+	sumMask = np.zeros(0)
+    #set up stat/end position values for slicing sequence string
+	start_pos = 0
+	end_pos = 205
+	exportableLen = 0 #keep track of covered sequence, will export it to a numpy binary when it reaches the exportSize
+	fileNames = [] #return list of file names to help reassemble all sequence predictions later
+	while True :
+		seq_slice = ''
+		effective_len = 0
+		if end_pos <= len(seq) : #if the sequence is longer than 205 nts can slice w/o padding
+			seq_slice = seq[start_pos: end_pos]
+			effective_len = 205
+		else : #if sequence is not longer than 205 nts cannot slice w/o padding
+			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
+			effective_len = len(seq[start_pos:]) #will have to remove the trailing dummy predictions before averaging and export
+		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
+		if effective_len != 205: #need to cut the predictions down to size
+			#remove trailing predictions, average and export 
+			
+		else: #is 205, no cutting down needed
+			#extend travelling edges by sequence_stride, add ones/predictions to the edges 
+		
+		if end_pos >= len(seq) : #if done slicing the seq, we're finished. export remaining and break
+			#unclear if we will ever reach this given additional if requirement above (may need to move the break)
+			break
+       		#update cut positions to predict for next slice 
+		start_pos += sequence_stride 
+		end_pos += sequence_stride
+		#update exportable lengths
+		#will depend on sequnece_stride, exportSize 
+		if exportableLen >= exportSize:
+			#average the trailing edge of the array, export it to a numpy binary
+	return fileNames
+
 ##########################################
 def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_stride=2, strided_agg_mode='max', iso_scoring_mode='both', score_unit='log') :
 	peak_iso_scores = []
