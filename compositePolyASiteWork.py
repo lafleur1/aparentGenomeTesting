@@ -80,7 +80,7 @@ plt.show()
 """
 ########################################## counting region types in genome ###########################
 #first column
-
+"""
 chr_name = pas_stuff[pas_stuff.columns[0]]
 #note that the original BED file has 91 seqName values because 9 and '9' are both used in the original dataset.  There are only 90 chromosomes/contigs that have PAS clusters in the dataset
 allStuff = list(set([str(x) for x in chr_name ]))
@@ -96,7 +96,7 @@ file_out = open("UnlocalizedNames.txt", "w")
 for name in chr_name_str:
 	file_out.write(name + "\n")
 file_out.close()
-
+"""
 """
 chr_name_str = sorted(chr_name_str)
 #figure out types of unlocalized in a chromosome vs unplaced contigs:
@@ -118,7 +118,7 @@ print ("SUM: ", other + numberKI + numberGL)
 print ("ACTUAL: ", len(chr_name_str))
 """
 ################# storing names of region and number PAS sites ###########3
-
+"""
 #saving the count of PAS clusters in each genomic region
 #storage = open("humanPolyASite2.0PASClustersPerGenomicRegion.txt", "w")
 chr_dist = pas_stuff.seqName.value_counts()
@@ -130,8 +130,8 @@ plt.title("Clusters per Genomic Region")
 plt.ylabel("Cluster Count")
 plt.xlabel("Genomic Region")
 plt.show()
-
-
+"""
+'''
 ################# graphing type of clusters in human genome ###################3
 type_dist = pas_stuff.type.value_counts()
 #ax = type_dist.plot.bar(x='type', rot = 0)
@@ -153,6 +153,13 @@ print (pas_stuff.info())
 avg_TPM_sorted = sorted(avg_TPM_all)
 '''
 '''
+
+count_percents = pas_stuff.percentSupporting.value_counts()
+count_percents.plot.bar()
+plt.show()
+"""
+print (count_percents)
+
 print (len(avg_TPM_sorted))
 #dummy vals 
 dummyX = np.arange(0,len(avg_TPM_sorted))
@@ -184,6 +191,18 @@ plt.show()
 n, bins, patches = plt.hist(percent_supporting, 20)
 plt.title("Human Percent Samples Supporting a PAS Cluster Distribution")
 plt.show()
-'''
+"""
+
+
+
+#check size vs APA distributions
+#look at signals throughout a gene
+#do peaks in/out of clusters
+#ranking strenghts -> 
+#see intervals vs curves
+#play around with clsuter
+#Try just UTR stuff
+#run reverse complements for negative/positives
+
 
 ##################################################
