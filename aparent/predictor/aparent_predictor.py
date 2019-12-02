@@ -34,13 +34,13 @@ class OneHotEncoder :
             3 : 'T',
             -1 : 'X'
         }
-    
+
     def encode(self, seq) :
         #encode string into self rows # 4 cols array
-        one_hot = np.zeros((self.seq_length, 4)) 
+        one_hot = np.zeros((self.seq_length, 4))
         self.encode_inplace(seq, one_hot)
         return one_hot
-    
+
     def encode_inplace(self, seq, encoding) :
         #for each position, fill with corresponding value in the encode_map or with teh default fill value (0 by default)
         for pos, nt in enumerate(list(seq)) :
@@ -48,7 +48,7 @@ class OneHotEncoder :
                 encoding[pos, self.encode_map[nt]] = 1
             elif self.default_fill_value != 0 :
                 encoding[pos, :] = self.default_fill_value
-    
+
     def __call__(self, seq) :
         return self.encode(seq)
 
@@ -61,23 +61,23 @@ def get_aparent_encoder(lib_bias=None) :
     #set up one hot encoder for them model
     #TODO: WHAT IS LIB BIAS
 	onehot_encoder = OneHotEncoder(205) #autoencoder can encode 205, 205 + long sequences
-    
-    #reshapes the 205x4 onehot of sequence into 
+
+    #reshapes the 205x4 onehot of sequence into
 	def encode_for_aparent(sequences) :
 		one_hots = np.concatenate([np.reshape(onehot_encoder(sequence), (1, len(sequence), 4, 1)) for sequence in sequences], axis=0)
-		
+
 		fake_lib = np.zeros((len(sequences), 13)) #which of the 13 libraries it is from
 		fake_d = np.ones((len(sequences), 1))
 
-		if lib_bias is not None : #if there is a lib_bias, sets that row to 1 in the fake_lib 
+		if lib_bias is not None : #if there is a lib_bias, sets that row to 1 in the fake_lib
 			fake_lib[:, lib_bias] = 1.
 
-		return [ 
+		return [
 			one_hots,
 			fake_lib,
 			fake_d
 		]
-    
+
 	return encode_for_aparent
 
 #PROB DON"T NEED####################
@@ -86,10 +86,10 @@ def get_aparent_legacy_encoder(lib_bias=None) :
 
 	def encode_for_aparent(sequences) :
 		one_hots = np.concatenate([np.reshape(onehot_encoder(sequence), (1, 1, len(sequence), 4)) for sequence in sequences], axis=0)
-		
+
 		fake_lib = np.zeros((len(sequences), 36))
 		fake_d = np.ones((len(sequences), 1))
-		
+
 		if lib_bias is not None :
 			fake_lib[:, lib_bias] = 1.
 
@@ -110,7 +110,7 @@ def get_apadb_encoder() :
         #encode proximal and distal sequencesfrom apadb
 		prox_one_hots = np.concatenate([np.reshape(onehot_encoder(sequence), (1, len(sequence), 4, 1)) for sequence in prox_sequences], axis=0)
 		dist_one_hots = np.concatenate([np.reshape(onehot_encoder(sequence), (1, len(sequence), 4, 1)) for sequence in dist_sequences], axis=0)
-        
+
         #The new shape should be compatible with the original shape. If an integer, then the result will be a 1-D array of that length. One shape dimension can be -1. In this case, the value is inferred from the length of the array and remaining dimensions. -> from Numpy.reshape docs
 		return [
 			prox_one_hots,
@@ -123,14 +123,14 @@ def get_apadb_encoder() :
 			np.zeros((len(prox_sequences), 13)),
 			np.ones((len(prox_sequences), 1))
 		]
-    
+
 	return encode_for_apadb
 
 def find_polya_peaks(aparent_model, aparent_encoder, seq, sequence_stride=10, conv_smoothing=True, peak_min_height=0.01, peak_min_distance=50, peak_prominence=(0.01, None)) :
     #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
 	cut_pred_padded_slices = []
 	cut_pred_padded_masks = []
-    
+
     #set up stat/end position values for slicing sequence string
 	start_pos = 0
 	end_pos = 205
@@ -149,10 +149,10 @@ def find_polya_peaks(aparent_model, aparent_encoder, seq, sequence_stride=10, co
 
 		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
 		#print ("sum of cut_pred one pred: ", sum(cut_pred[0]))
-		#print (len(cut_pred[0]))        
+		#print (len(cut_pred[0]))
 		#print("Striding over subsequence [" + str(start_pos) + ", " + str(end_pos) + "] (Total length = " + str(len(seq)) + ")...")
 		#print ("seq_slice")
-		#print (seq_slice)        
+		#print (seq_slice)
 		#print ("cut slice")
 		#print (cut_pred)
 		padded_slice = np.concatenate([
@@ -162,7 +162,7 @@ def find_polya_peaks(aparent_model, aparent_encoder, seq, sequence_stride=10, co
 			np.array([np.ravel(cut_pred)[205]]) #TODO What does this do???
 		], axis=0)
 		#print ("padded_slice: ")
-		#print (padded_slice)        
+		#print (padded_slice)
 		padded_mask = np.concatenate([
 			np.zeros(start_pos),
 			np.ones(effective_len),
@@ -176,16 +176,16 @@ def find_polya_peaks(aparent_model, aparent_encoder, seq, sequence_stride=10, co
 		#print ("cut_pred_padded_slices: ")
 		#print (cut_pred_padded_slices)
 		#print ("cut_pred_padded_slices: ")
-		#print (cut_pred_padded_masks)        
+		#print (cut_pred_padded_masks)
 
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
 			break
-        
-        #update cut positions to predict for next slice 
-		start_pos += sequence_stride 
+
+        #update cut positions to predict for next slice
+		start_pos += sequence_stride
 		end_pos += sequence_stride
 
-    
+
 	cut_slices = np.concatenate(cut_pred_padded_slices, axis=0)[:, :-1] #concatenate all padded slice stuff
 	cut_masks = np.concatenate(cut_pred_padded_masks, axis=0)[:, :-1]
 	#print ("cut_slices: ")
@@ -194,25 +194,25 @@ def find_polya_peaks(aparent_model, aparent_encoder, seq, sequence_stride=10, co
 	#print ("cut_masks: ")
 	#print (cut_masks)
 	#print (cut_masks.shape)
-	#print (sum(cut_masks))    
-    #scipy.signal.correlate smoothing 
+	#print (sum(cut_masks))
+    #scipy.signal.correlate smoothing
 	if conv_smoothing :
 		smooth_filter = np.array([
 			[0.005, 0.01, 0.025, 0.05, 0.085, 0.175, 0.3, 0.175, 0.085, 0.05, 0.025, 0.01, 0.005]
 		])
 
-		cut_slices = sp_corr(cut_slices, smooth_filter, mode='same') 
-	
+		cut_slices = sp_corr(cut_slices, smooth_filter, mode='same')
+
 	#divide the sum of the cut_slices by the masks
 	avg_cut_pred = np.sum(cut_slices, axis=0) / np.sum(cut_masks, axis=0)
 	#print("avg_cut_pred per site: ")
-	#print(avg_cut_pred)    
+	#print(avg_cut_pred)
 	std_cut_pred = np.sqrt(np.sum((cut_slices - np.expand_dims(avg_cut_pred, axis=0))**2, axis=0) / np.sum(cut_masks, axis=0))
 	#print("std_cut_pred per site: ")
 	#print(std_cut_pred)
-	peak_ixs, _ = find_peaks(avg_cut_pred, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) #using scipy signal function find_peaks 
+	peak_ixs, _ = find_peaks(avg_cut_pred, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) #using scipy signal function find_peaks
 
-	
+
 	return peak_ixs.tolist(), avg_cut_pred, sum(cut_masks)
 
 def find_polya_peaks_tofile(fName, aparent_model, aparent_encoder, seq, sequence_stride=10, conv_smoothing=True, peak_min_height=0.01, peak_min_distance=50, peak_prominence=(0.01, None) ) :
@@ -240,22 +240,22 @@ def find_polya_peaks_tofile(fName, aparent_model, aparent_encoder, seq, sequence
 			np.ravel(cut_pred)[:effective_len], #sequence slice predictions
 			np.zeros(len(seq) - start_pos - effective_len), #zeros after predictions
 			np.array([np.ravel(cut_pred)[205]]) #TODO What does this do???
-		], axis=0)       
+		], axis=0)
 		padded_mask = np.concatenate([
 			np.zeros(start_pos),
 			np.ones(effective_len),
 			np.zeros(len(seq) - start_pos - effective_len),
 			np.ones(1)
 		], axis=0)[:len(seq)+1]
-		
+
 		#outputting npy for the slices and the masks
 		np.save(fName + "PredSlices" + str(fileOut), padded_slice.reshape(1, -1))
 		np.save(fName + "MaskSlices" + str(fileOut), padded_mask.reshape(1, -1))
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
 			break
 
-        #update cut positions to predict for next slice 
-		start_pos += sequence_stride 
+        #update cut positions to predict for next slice
+		start_pos += sequence_stride
 		end_pos += sequence_stride
 		fileOut += 1
 
@@ -266,7 +266,7 @@ def find_polya_peaks_tofile(fName, aparent_model, aparent_encoder, seq, sequence
 def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequence_stride=10, conv_smoothing=True, peak_min_height=0.01, peak_min_distance=50, peak_prominence=(0.01, None)) :
     #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
 	sumCutPreds = np.zeros(len(seq))
-	sumMask = np.zeros(len(seq))    
+	sumMask = np.zeros(len(seq))
     #set up stat/end position values for slicing sequence string
 	start_pos = 0
 	end_pos = 205
@@ -278,14 +278,14 @@ def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequenc
 			effective_len = 205
 		else : #if sequence is not longer than 205 nts cannot slice w/o padding
 			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
-			effective_len = len(seq[start_pos:]) 
+			effective_len = len(seq[start_pos:])
 		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
 		padded_slice = np.concatenate([
 			np.zeros(start_pos), #0's before sequence slice
 			np.ravel(cut_pred)[:effective_len], #sequence slice predictions
 			np.zeros(len(seq) - start_pos - effective_len), #zeros after predictions
 			np.array([np.ravel(cut_pred)[205]]) #TODO What does this do???
-		], axis=0)       
+		], axis=0)
 		padded_mask = np.concatenate([
 			np.zeros(start_pos),
 			np.ones(effective_len),
@@ -293,18 +293,18 @@ def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequenc
 			np.ones(1)
 		], axis=0)[:len(seq)+1]
 		sumCutPreds = sumCutPreds + padded_slice.reshape(1, -1)[:,:-1]
-		sumMask = sumMask + padded_mask.reshape(1, -1)[:,:-1]  
+		sumMask = sumMask + padded_mask.reshape(1, -1)[:,:-1]
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
 			break
-        #update cut positions to predict for next slice 
-		start_pos += sequence_stride 
+        #update cut positions to predict for next slice
+		start_pos += sequence_stride
 		end_pos += sequence_stride
 	avg_cut_pred = sumCutPreds/sumMask
-	peak_ixs, _ = find_peaks(avg_cut_pred[0], height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) 
+	peak_ixs, _ = find_peaks(avg_cut_pred[0], height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence)
 	return peak_ixs.tolist(), avg_cut_pred
 
 
-
+'''
 #this version will run along longer sequences, exporting completed prediction regions as it goes.
 #that way it will have optimal coverage for a greater portion of the genome
 def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, sequence_stride=10, exportSize = 100000, filePath) :
@@ -325,24 +325,24 @@ def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, seque
 		else : #if sequence is not longer than 205 nts cannot slice w/o padding
 			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
 			effective_len = len(seq[start_pos:]) #will have to remove the trailing dummy predictions before averaging and export
-		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
-		if effective_len != 205: #need to cut the predictions down to size
-			#remove trailing predictions, average and export 
-			
+        _, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
+        if effective_len != 205: #need to cut the predictions down to size
+			#remove trailing predictions, average and export
+
 		else: #is 205, no cutting down needed
-			#extend travelling edges by sequence_stride, add ones/predictions to the edges 
-		
+			#extend travelling edges by sequence_stride, add ones/predictions to the edges
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. export remaining and break
 			#unclear if we will ever reach this given additional if requirement above (may need to move the break)
 			break
-       		#update cut positions to predict for next slice 
-		start_pos += sequence_stride 
+       		#update cut positions to predict for next slice
+		start_pos += sequence_stride
 		end_pos += sequence_stride
 		#update exportable lengths
-		#will depend on sequnece_stride, exportSize 
+		#will depend on sequnece_stride, exportSize
 		if exportableLen >= exportSize:
 			#average the trailing edge of the array, export it to a numpy binary
-	return fileNames
+    return fileNames
+'''
 
 ##########################################
 def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_stride=2, strided_agg_mode='max', iso_scoring_mode='both', score_unit='log') :
@@ -392,6 +392,5 @@ def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_st
 			peak_iso_scores[-1] = round(peak_iso_scores[-1], 3)
 		else :
 			peak_iso_scores.append(-10)
-	
-	return peak_iso_scores
 
+	return peak_iso_scores
