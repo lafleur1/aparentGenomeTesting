@@ -30,7 +30,7 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #doing y, x and their RC's
 
 fastaDestination = "./fastas/"
-fastaNames = ["chrX", "chrY"]
+fastaNames = ["chrY", "chr22", "chr21"]
 stem = "chromosomePredictions/"
 
 for name in fastaNames:
