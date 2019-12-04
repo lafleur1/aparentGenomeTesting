@@ -69,20 +69,21 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #setting up files
 fastaDestination = "../fastas/"
 #fastaNames = ["CM000666.2"]
-#fastaNames = ["FA270747.1"] # fake small fasta file based on KI270747.1
-fastaNames = ["CM000677.2"]
+fastaNames = ["FA270747.1"] # fake small fasta file based on KI270747.1
+#fastaNames = ["CM000677.2"]
 predDestination = "../PredictionBinaries/"
 #strideSizes = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,45,50]
 #strideSizes = [10]
 strideSizes = [50]
 #chunks = 10 # set number of chunks to break up DNA sample into
-sliceSize = 100000
-#sliceSize = 10000
+#sliceSize = 100000
+sliceSize = 1000
 padSize = 186+(strideSizes[0]*2) # pad for slicing off at end (206)
+padSize1 = 400 # arbitrarily chosen pad size to make sure we have enough room at end
 increaseSize = sliceSize + padSize*2 # put one pad on each size which we can slice off at end
 parallelFlag = 0 # set to 1 for doing multiprocessing, 0 for single thread
 mergeFlag = 1 # 0 for skip merge, 1 for predict and merge, 2 for just merge
-reverseCompFlag = 1 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
+reverseCompFlag = 0 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
 #logLoc = logging.getLoggerClass().root.handlers[0].baseFilename
 '''
 logfilenames = []
@@ -285,13 +286,15 @@ if __name__ == '__main__':
             logPrint ("Stride length is: " + str(stride))
             repPeriod = name.replace(".", "_")
             #filename = predDestination + name + "Predictions/" +repPeriod + "_cutPredsStrideLen" + str(stride)
-            dirDest = predDestination + '/' + str(logTime)
+            dirDest = predDestination + str(logTime) + '/'
             makeFilePath(dirDest)
             predsAdd = "Predictions/"
             if(reverseCompFlag==1):
                 predsAdd = "Predictions_revComp/"
+            #directory = dirDest  + name + predsAdd
             directory = predDestination  + name + predsAdd
-            fileNameBase = directory +repPeriod + "_cutPredsStrideLen" + str(stride)
+            #fileNameBase = directory +repPeriod + "_cutPredsStrideLen" + str(stride)
+            fileNameBase = os.path.join(directory, repPeriod, "_cutPredsStrideLen",str(stride))
             mergeList = { }
             filenameList = { }
             if (mergeFlag<2):
