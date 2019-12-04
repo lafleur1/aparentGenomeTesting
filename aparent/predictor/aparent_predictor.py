@@ -5,7 +5,7 @@ from keras import backend as K
 import tensorflow as tf
 
 import os
-
+import time
 import numpy as np
 
 from scipy.signal import convolve as sp_conv
@@ -275,11 +275,20 @@ def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequenc
 		effective_len = 0
 		if end_pos <= len(seq) : #if the sequence is longer than 205 nts can slice w/o padding
 			seq_slice = seq[start_pos: end_pos]
+		#	print (len(seq_slice))
 			effective_len = 205
 		else : #if sequence is not longer than 205 nts cannot slice w/o padding
 			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
 			effective_len = len(seq[start_pos:]) 
 		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
+		#print (cut_pred.shape)
+		#print ("up to effective len: ")
+		#print (np.ravel(cut_pred)[:effective_len])
+		#print (np.ravel(cut_pred)[:effective_len].shape)
+		#print ("last pos???")
+		#print (np.array([np.ravel(cut_pred)[205]]))
+		#print (np.array([np.ravel(cut_pred)[205]]).shape)
+		#print ( "--------------------")
 		padded_slice = np.concatenate([
 			np.zeros(start_pos), #0's before sequence slice
 			np.ravel(cut_pred)[:effective_len], #sequence slice predictions
@@ -292,57 +301,140 @@ def find_polya_peaks_memoryFriendly(aparent_model, aparent_encoder, seq, sequenc
 		np.zeros(len(seq) - start_pos - effective_len),
 			np.ones(1)
 		], axis=0)[:len(seq)+1]
-		sumCutPreds = sumCutPreds + padded_slice.reshape(1, -1)[:,:-1]
-		sumMask = sumMask + padded_mask.reshape(1, -1)[:,:-1]  
+		#print ("--------------------------------")
+		#print ("prereshape:")
+		#print (padded_slice.shape)
+		#print (padded_mask.shape)
+		reshapedSlice = padded_slice.reshape(1, -1)[:,:-1]
+		reshapedMask = padded_mask.reshape(1, -1)[:,:-1]  
+		#print ("reshape:")
+		#print (reshapedSlice.shape)
+		#print (reshapedMask.shape)
+		#print ("---------------------")
+		sumCutPreds = sumCutPreds + reshapedSlice
+		#print (" sum shape: ", sumCutPreds.shape)
+		sumMask = sumMask + reshapedMask
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
 			break
         #update cut positions to predict for next slice 
 		start_pos += sequence_stride 
 		end_pos += sequence_stride
 	avg_cut_pred = sumCutPreds/sumMask
+	#print ("avg shape: ", avg_cut_pred.shape)
+	#print ("avg inside: ", avg_cut_pred[0].shape)
 	peak_ixs, _ = find_peaks(avg_cut_pred[0], height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) 
 	return peak_ixs.tolist(), avg_cut_pred
 
-
-
-#this version will run along longer sequences, exporting completed prediction regions as it goes.
-#that way it will have optimal coverage for a greater portion of the genome
-def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, sequence_stride=10, exportSize = 100000, filePath) :
-    #exports (empty array)
-	sumCutPreds = np.zeros(0)
-	sumMask = np.zeros(0)
+#no padding version (reduces number operations)
+def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, sequence_stride=10, conv_smoothing=True, peak_min_height=0.01, peak_min_distance=50, peak_prominence=(0.01, None)) :
+    #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
+	sumCutPreds = np.zeros(len(seq))
+	sumMask = np.zeros(len(seq))    
     #set up stat/end position values for slicing sequence string
 	start_pos = 0
 	end_pos = 205
-	exportableLen = 0 #keep track of covered sequence, will export it to a numpy binary when it reaches the exportSize
-	fileNames = [] #return list of file names to help reassemble all sequence predictions later
 	while True :
 		seq_slice = ''
 		effective_len = 0
 		if end_pos <= len(seq) : #if the sequence is longer than 205 nts can slice w/o padding
 			seq_slice = seq[start_pos: end_pos]
+			#print (len(seq_slice))
 			effective_len = 205
 		else : #if sequence is not longer than 205 nts cannot slice w/o padding
 			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
-			effective_len = len(seq[start_pos:]) #will have to remove the trailing dummy predictions before averaging and export
+			effective_len = len(seq[start_pos:]) 
+		#print (effective_len)
 		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
-		if effective_len != 205: #need to cut the predictions down to size
-			#remove trailing predictions, average and export 
-			
-		else: #is 205, no cutting down needed
-			#extend travelling edges by sequence_stride, add ones/predictions to the edges 
-		
-		if end_pos >= len(seq) : #if done slicing the seq, we're finished. export remaining and break
-			#unclear if we will ever reach this given additional if requirement above (may need to move the break)
-			break
-       		#update cut positions to predict for next slice 
+		pred_removeLast = np.ravel(cut_pred)[:effective_len]      
+		#print ( pred_removeLast.shape)
+		mask_removeLast = np.ones(effective_len)
+		#print (sumCutPreds[ effective_len].shape)
+		#print (pred_removeLast.shape)
+		sumCutPreds[start_pos : start_pos + effective_len] = sumCutPreds[start_pos : start_pos + effective_len] + pred_removeLast
+		sumMask[start_pos : start_pos + effective_len] = sumMask[start_pos : start_pos + effective_len] + mask_removeLast
+		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
+			break 
 		start_pos += sequence_stride 
 		end_pos += sequence_stride
-		#update exportable lengths
-		#will depend on sequnece_stride, exportSize 
-		if exportableLen >= exportSize:
-			#average the trailing edge of the array, export it to a numpy binary
-	return fileNames
+	avg_cut_pred = sumCutPreds/sumMask
+	peak_ixs, _ = find_peaks(avg_cut_pred, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) 
+	return peak_ixs.tolist(), avg_cut_pred, sumMask
+
+
+#no padding version (reduces number operations)
+def find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, seq, fileStem, sequence_stride, output_size) :
+    #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
+	sumCutPreds = np.zeros(205)
+	sumMask = np.zeros(205)    
+	fileNames = [] #list of numpy binary files created 
+    #set up stat/end position values for slicing sequence string
+	start_pos = 0
+	end_pos = 205
+	files_out = 1
+	totalTimeStart = time.time()
+	while True :
+		start_time = time.time()
+		seq_slice = ''
+		effective_len = 0
+		if end_pos <= len(seq): #if the sequence is longer than 205 nts can slice w/o padding
+			seq_slice = seq[start_pos: end_pos]
+			#print (len(seq_slice))
+			effective_len = 205
+		else : #if sequence is not longer than 205 nts cannot slice w/o padding
+			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
+			effective_len = len(seq[start_pos:]) 
+		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
+		pred_removeLast = np.ravel(cut_pred)[:effective_len]      
+		mask_removeLast = np.ones(effective_len)
+		#print (sumCutPreds[- effective_len:].shape)
+		#print (pred_removeLast.shape)
+		sumCutPreds[- effective_len:] = sumCutPreds[- effective_len:] + pred_removeLast
+		#print (sumMask)
+		#print (sumMask[-effective_len:])
+		#print ( mask_removeLast.shape)
+		sumMask[-effective_len:] = sumMask[-effective_len:] + mask_removeLast
+		#print (sumMask[-effective_len:])
+		#print ("buffer zone")
+		
+		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while and export 
+			
+			#output final length of predictions	
+			outAvg = sumCutPreds/sumMask
+			print ("final shape: ", outAvg.shape)
+			print ("END POS: ", end_pos, " len(seq): ", len(seq))
+			name_current = fileStem + "_" + str(files_out) + "_" + str(output_size)
+			fileNames.append(name_current)
+			np.save(name_current, outAvg)
+			#print ("On final file: ", files_out, "time: ", time.time()-start_time)
+			
+			break 
+		start_pos += sequence_stride 
+		end_pos += sequence_stride
+		#increase length by stride for sumCutPreds and sumMask
+		sumCutPreds = np.concatenate((sumCutPreds, np.zeros(sequence_stride)), axis = 0)
+		sumMask = np.concatenate((sumMask, np.zeros(sequence_stride)), axis = 0)
+		#see if there is enough done to export (buffer zone of 500 long)
+		
+		if sumCutPreds.size >= output_size + 500:
+			#export the first output_size of the working edge averaged, reset the sumCutPreds and sumMask
+			predOut = sumCutPreds[:output_size]
+			maskOut = sumMask[:output_size]
+			sumCutPreds = sumCutPreds[output_size:]
+			sumMask = sumMask[output_size:]
+			outAvg = predOut/maskOut
+			name_current = fileStem + "_" + str(files_out) + "_" + str(output_size)
+			fileNames.append(name_current)
+			np.save(name_current, outAvg)
+			#print ("On file: ", files_out, "time: ", time.time()-start_time)
+			files_out += 1
+		
+	#avg_cut_pred = sumCutPreds/sumMask
+	#peak_ixs, _ = find_peaks(avg_cut_pred, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) 
+	print ("total elapsed time: ", time.time() - totalTimeStart)
+	#avgOut = sumCutPreds/sumMask
+	return fileNames #, avgOut, sumMask
+
+
 
 ##########################################
 def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_stride=2, strided_agg_mode='max', iso_scoring_mode='both', score_unit='log') :
