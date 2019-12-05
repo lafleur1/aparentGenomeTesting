@@ -1,3 +1,5 @@
+# predictingChromosomes2.py properly predicts chromosomes via slices and merges them back together, but still contains some debug and comments
+
 from __future__ import print_function
 import keras
 from keras.models import Sequential, Model, load_model
@@ -69,20 +71,21 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #setting up files
 fastaDestination = "../fastas/"
 #fastaNames = ["CM000666.2"]
-#fastaNames = ["FA270747.1"] # fake small fasta file based on KI270747.1
-fastaNames = ["CM000677.2"]
+fastaNames = ["FA270747.1"] # fake small fasta file based on KI270747.1
+#fastaNames = ["CM000677.2"]
 predDestination = "../PredictionBinaries/"
 #strideSizes = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20,25,30,35,40,45,50]
 #strideSizes = [10]
 strideSizes = [50]
 #chunks = 10 # set number of chunks to break up DNA sample into
-sliceSize = 100000
-#sliceSize = 10000
-padSize = 186+(strideSizes[0]*2) # pad for slicing off at end (206)
-increaseSize = sliceSize + padSize*2 # put one pad on each size which we can slice off at end
+#sliceSize = 100000
+sliceSize = 1000
+#padSize1 = 186+(strideSizes[0]*2) # pad for slicing off at end (206)
+padSize = 400 # arbitrarily chosen large pad size to make sure we have enough room at end
+fileSize = sliceSize + padSize*2 # file size before merging; put one pad on each size which we can slice off at end
 parallelFlag = 0 # set to 1 for doing multiprocessing, 0 for single thread
-mergeFlag = 1 # 0 for skip merge, 1 for predict and merge, 2 for just merge
-reverseCompFlag = 1 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
+mergeFlag = 2 # 0 for skip merge, 1 for predict and merge, 2 for just merge
+reverseCompFlag = 0 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
 #logLoc = logging.getLoggerClass().root.handlers[0].baseFilename
 '''
 logfilenames = []
@@ -94,12 +97,12 @@ for handler in logger.handlers:
 '''
 #logPrint('Log location: ' + str(logLoc))
 #print('Log location: ' + str(logfilenames))
-logPrint('Logging predictingChromosomes3.py')
+logPrint('Logging predictingChromosomes2.py')
 logPrint('Start time is: ' + str(startTime))
 logPrint('fastaNames are: ' + str(fastaNames))
 logPrint('strideSizes are: ' + str(strideSizes))
 #logPrint('chunks is set to: ' + str(chunks))
-logPrint('increaseSize: ' + str(increaseSize) + ', sliceSize: ' + str(sliceSize) + ', padSize: ' + str(padSize))
+logPrint('fileSize: ' + str(fileSize) + ', sliceSize: ' + str(sliceSize) + ', padSize: ' + str(padSize))
 logPrint('mergeFlag is set to: ' + str(mergeFlag))
 logPrint('parallelFlag is set to: ' + str(parallelFlag))
 logPrint('reverseCompFlag is set to: ' + str(reverseCompFlag))
@@ -179,15 +182,36 @@ def mergeSlicedFiles(fileNameBase,mergeList,filepathList,totLen = 0):
 
     spliceDiff = padSize # amount of bps (206) to cut off beginning and end of arrays when merging
     mergeArray1 = mergeList[0][0]
-    mergeArray1 = mergeArray1[0]
+    #mergeArray1 = mergeArray1[0]
     mergeFilepath = filepathList[0]
     sliceNum, start, end, stride, name, totLen = getFileStats(mergeFilepath)
     firstEnd = end # also the slice size
-    y = np.empty(totLen) # could make this more efficient by preloading the length
+    y = np.empty(totLen)
     prevEnd = 0
     mergeStart = 0
+    # do something special to start for the 0th file
+    print(len(mergeArray1))
+    mergeArray0_lastInd = firstEnd-spliceDiff
+    #mergeArray0_lastInd =
+    mergeArray0 = mergeArray1[:mergeArray0_lastInd+1]
+    print(len(mergeArray0))
+    #np.append(y,mergeArray0)
+    y[:mergeArray0_lastInd+1] = mergeArray0
+    print(len(y))
+    print(y[mergeArray0_lastInd-1])
+    print(mergeArray0[mergeArray0_lastInd-1])
+    print(mergeArray1[mergeArray0_lastInd-1])
+    print(y[mergeArray0_lastInd-2])
+    print(mergeArray0[mergeArray0_lastInd-2])
+    print(mergeArray1[mergeArray0_lastInd-2])
+    logPrint('Added to y between ' + str(0) + ':' + str(mergeArray0_lastInd) + ' with filename='+str(mergeFilepath))
+    logPrint('mergeArray0[0]='+str(mergeArray0[0])+', mergeArray0[1]='+str(mergeArray0[1])+\
+    ', mergeArray0['+str(mergeArray0_lastInd-1)+']='+str(mergeArray0[mergeArray0_lastInd-1])+', mergeArray0['+str(mergeArray0_lastInd)+']='+str(mergeArray0[mergeArray0_lastInd]))
+    logPrint('     y['+str(0)+']='+str(y[0])+',      y['+str(0+1)+']='+str(y[0+1])+\
+    ',         y['+str(mergeArray0_lastInd-1)+']='+str(y[mergeArray0_lastInd-1])+',        y['+str(mergeArray0_lastInd)+']='+str(y[mergeArray0_lastInd]))
 
-    for i in range(0,len(mergeList)):
+
+    for i in range(1,len(mergeList)):
     #for i in range(0,10):
         mergeArray1 = mergeList[i][0] # full array + 206 at each end as padding
         #logPrint(mergeArray1)
@@ -201,14 +225,23 @@ def mergeSlicedFiles(fileNameBase,mergeList,filepathList,totLen = 0):
 
 
         arrayLen = len(mergeArray1)
+        print(arrayLen)
+        print(curEnd-curStart)
         mergeLen = arrayLen - spliceDiff*2
         #logPrint('mergeStart:'+str(mergeStart)+', mergeEnd:'+str(mergeEnd)+', arrayLen:'+str(arrayLen)+', mergeLen:'+str(mergeLen))
 
         # calculate and append the part of the array we want to append
-        mergeArray = mergeArray1[spliceDiff:(mergeLen+spliceDiff)]
-        np.append(y,mergeArray)
+        mergeArray = mergeArray1[(spliceDiff):(mergeLen+spliceDiff)] # TODO: this +1 may be problematic- this error may be coming from our prediction code in creating the files
+        #np.append(y,mergeArray)
+        #y[curStart:(curEnd-spliceDiff*2)] = mergeArray
+        y[mergeStart:mergeEnd+1] = mergeArray
 
         # print extra debug info afterwards
+        logPrint('Added to y between ' + str(mergeStart) + ':' + str(mergeEnd) + ' with filename='+str(mergeFilepath))
+        logPrint('mergeArray[0]='+str(mergeArray[0])+', mergeArray[1]='+str(mergeArray[1])+\
+        ', mergeArray['+str(mergeLen-2)+']='+str(mergeArray[mergeLen-2])+', mergeArray['+str(mergeLen-1)+']='+str(mergeArray[mergeLen-1]))
+        logPrint('     y['+str(mergeStart)+']='+str(y[mergeStart])+',      y['+str(mergeStart+1)+']='+str(y[mergeStart+1])+\
+        ',         y['+str(mergeEnd-1)+']='+str(y[mergeEnd-1])+',        y['+str(mergeEnd)+']='+str(y[mergeEnd]))
         #logPrint('Appended array from file:'+str(mergeFilepath))
         #logPrint('len(mergeArray)='+str(len(mergeArray))+', mergeArray=')
         #logPrint(mergeArray)
@@ -218,7 +251,8 @@ def mergeSlicedFiles(fileNameBase,mergeList,filepathList,totLen = 0):
         #', start='+str(mergeStart)+', end='+str(mergeEnd)+', mergeArrayLen:' + str(len(mergeArray)))
 
         prevEnd = mergeEnd
-    filename = fileNameBase + 'SliceSize' +str(firstEnd)+'TotLen' +str(totLen) + '_merged'
+    y[mergeStart:] = mergeArray1[spliceDiff:]
+    filename = fileNameBase + 'SliceSize' +str(firstEnd)+'TotLen' +str(totLen) + '_merged8'
     logPrint('Saving merged file with len(y)='+str(len(y))+' and y= ')
     logPrint(y)
     saveFile([0,0,0],y,filename)
@@ -285,18 +319,20 @@ if __name__ == '__main__':
             logPrint ("Stride length is: " + str(stride))
             repPeriod = name.replace(".", "_")
             #filename = predDestination + name + "Predictions/" +repPeriod + "_cutPredsStrideLen" + str(stride)
-            dirDest = predDestination + '/' + str(logTime)
+            dirDest = predDestination + str(logTime) + '/'
             makeFilePath(dirDest)
             predsAdd = "Predictions/"
             if(reverseCompFlag==1):
                 predsAdd = "Predictions_revComp/"
+            #directory = dirDest  + name + predsAdd
             directory = predDestination  + name + predsAdd
-            fileNameBase = directory +repPeriod + "_cutPredsStrideLen" + str(stride)
+            fileNameBase = directory+ repPeriod + "_cutPredsStrideLen" + str(stride)
+            #fileNameBase = os.path.join(directory, fileNameBase1, str(startTime))
             mergeList = { }
             filenameList = { }
             if (mergeFlag<2):
                 start = 0
-                end = increaseSize - 1
+                end = fileSize - 1
                 sliceNum = 0
                 #endTime = datetime.datetime.now()
                 #logPrint(endTime)
@@ -328,8 +364,8 @@ if __name__ == '__main__':
                         logPrint('Breaking out of for loop; end='+str(end)+', len(seq)='+str(len(seq)))
                         break
                     sliceNum +=1
-                    start += increaseSize - padSize*2
-                    end += increaseSize - padSize*2
+                    start += fileSize - padSize*2
+                    end += fileSize - padSize*2
                     #logPrint('Processed section for filename: ' + filename)
                     printTimingInfo()
                 '''
