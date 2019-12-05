@@ -30,7 +30,8 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #doing y, x and their RC's
 
 fastaDestination = "./fastas/"
-fastaNames = ["chrY", "chr22", "chr21"]
+fastaNames = ["chrY" , "chr22", "chr21"]
+#fastaNames = ["GL000225.1"]
 stem = "chromosomePredictions50/"
 
 for name in fastaNames:
@@ -50,7 +51,7 @@ for name in fastaNames:
                 peak_min_height=0.01,
                 peak_min_distance=50,
                 peak_prominence=(0.01, None),
-                counter = 1000000
+                counter = 500000
             )
 	print ("REVERSE COMPLEMENT")
 	xRC,yRC = find_polya_peaks_memoryFriendlyV2_LOUD(
@@ -62,9 +63,9 @@ for name in fastaNames:
                 peak_min_height=0.01,
                 peak_min_distance=50,
                 peak_prominence=(0.01, None),
-                counter = 1000000
+                counter = 500000
             )
-	np.save(filestem, y)
+	np.save(fileStem, y)
 	np.save(fileStemRC, yRC)
 	print ("FINISHED WITH : ", name)
 	

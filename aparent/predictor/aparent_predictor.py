@@ -372,6 +372,7 @@ def find_polya_peaks_memoryFriendlyV2_LOUD(aparent_model, aparent_encoder, seq, 
 	end_pos = 205
 	start_time = time.time()
 	len_seq = len(seq)
+	countCurrent = counter
 	while True :
 		seq_slice = ''
 		effective_len = 0
@@ -379,9 +380,10 @@ def find_polya_peaks_memoryFriendlyV2_LOUD(aparent_model, aparent_encoder, seq, 
 			seq_slice = seq[start_pos: end_pos]
 			#print (len(seq_slice))
 			effective_len = 205
-			if end_pos >= counter:
-				print ("Finished with: ", counter, " of ", len_seq, " ", "  Time elapsed: ", time.time()-start_time)
-				counter = counter + counter
+			if end_pos >= countCurrent:
+				print ("Finished with: ", countCurrent, " of ", len_seq, " ", "  Time elapsed: ", time.time()-start_time)
+				countCurrent = countCurrent + counter
+				start_time = time.time()
 		else : #if sequence is not longer than 205 nts cannot slice w/o padding
 			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
 			effective_len = len(seq[start_pos:]) 
