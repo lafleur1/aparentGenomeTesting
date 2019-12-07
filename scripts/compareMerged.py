@@ -2,6 +2,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.signal import find_peaks
 
 directory = '../PredictionBinaries/FA270747.1Predictions/compare/'
 directory1= '../PredictionBinaries/CM000681.2Predictions/compare/'
@@ -28,6 +29,8 @@ filename16= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged7.npy'
 filename17= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged8.npy'
 filename18= 'CM000681_2_cutPredsStrideLen50SliceSize100799TotLen58617616_merged.npy'
 filename19= 'chr19.npy'
+filename20= 'CM000681_2_cutPredsStrideLen50SliceSize100799TotLen58617616_merged_region6.npy'
+filename21= 'chr19_region6.npy'
 #filename1 = 'KI270747_1_cutPredsStrideLen10SliceSize198734TotLen198735_merged.npy'
 #filename2 = 'KK270747_1_cutPredsStrideLen10SliceSize100411TotLen198735_merged.npy'
 
@@ -50,6 +53,8 @@ filepath16 = directory+filename16
 filepath17 = directory+filename17
 filepath18 = directory1+filename18
 filepath19 = directory1+filename19
+filepath20 = directory1+filename20
+filepath21 = directory1+filename21
 
 padSize = 206
 padSize = 400
@@ -69,10 +74,14 @@ region9 = np.arange(sliceSize*27,sliceSize*28+diffSize) # 28th slice
 
 
 #array1 = np.load(filepath1)[0][region8] # full saved single run array, indexed by a region
-array1 = np.load(filepath1)[0] # full single run array
+#array1 = np.load(filepath1)[0] # full single run array
 #array1 = np.load(filepath12)[region3] # full merged file from run with 400 size pads
-array1 = np.load(filepath18)
-array2 = np.load(filepath19)
+#array1 = np.load(filepath18)[region6]
+array1 = np.load(filepath20)
+array2 = np.load(filepath21)
+#array2 = np.load(filepath19)[region6]
+#np.save(filepath20, array1)
+#np.save(filepath21, array2)
 #array2 = np.load(filepath6) # full merged file from run with 400 size pads
 #array2 = np.load(filepath8)[0]   # test array to validate
 #array2 = np.load(filepath6)[region3] # load region 3 because this is a single slice
@@ -138,6 +147,22 @@ for i in range(0,len(array1)):
     if(diff2[i]!=0):
         print(i)
 '''
+
+peak_min_height=0.01
+peak_min_distance=50
+peak_prominence=(0.01, None)
+peak_min_height=0.00
+peak_min_distance=10
+peak_prominence=(0.00, None)
+peak_ixs1, _ = find_peaks(array1, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence)
+peak_ixs2, _ = find_peaks(array2, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence)
+#peak_ixs1, _ = find_peaks(array1)
+#peak_ixs2, _ = find_peaks(array2)
+print('peak_ixs')
+print(peak_ixs1)
+print(peak_ixs2)
+print(array1[peak_ixs1])
+print(array2[peak_ixs2])
 
 print(region1)
 diff01 = array1[region1] - array2[region1]
