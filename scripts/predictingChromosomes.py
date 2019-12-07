@@ -57,7 +57,7 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #setting up files / configuration
 fastaDestination = "../fastas/"
 #fastaNames = ["FA270747.1"] # fake small fasta file based on KI270747.1
-fastaNames = ["CM000677.2"]
+fastaNames = ["CM000677.2", "CM000681.2", "CM000686.2", "CM000663.2", "CM000676.2", "CM000675.2"]
 predDestination = "../PredictionBinaries/"
 strideSizes = [50]
 sliceSize = 100000

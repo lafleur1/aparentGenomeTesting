@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 directory = '../PredictionBinaries/FA270747.1Predictions/compare/'
+directory1= '../PredictionBinaries/CM000681.2Predictions/compare/'
 #directory = '../PredictionBinaries/KK270747.1Predictions/compare/'
 
 # master is filename1
@@ -25,6 +26,8 @@ filename14= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged5.npy'
 filename15= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged6.npy'
 filename16= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged7.npy'
 filename17= 'FA270747_1_cutPredsStrideLen50SliceSize1799TotLen35210_merged8.npy'
+filename18= 'CM000681_2_cutPredsStrideLen50SliceSize100799TotLen58617616_merged.npy'
+filename19= 'chr19.npy'
 #filename1 = 'KI270747_1_cutPredsStrideLen10SliceSize198734TotLen198735_merged.npy'
 #filename2 = 'KK270747_1_cutPredsStrideLen10SliceSize100411TotLen198735_merged.npy'
 
@@ -45,6 +48,8 @@ filepath14 = directory+filename14
 filepath15 = directory+filename15
 filepath16 = directory+filename16
 filepath17 = directory+filename17
+filepath18 = directory1+filename18
+filepath19 = directory1+filename19
 
 padSize = 206
 padSize = 400
@@ -66,7 +71,9 @@ region9 = np.arange(sliceSize*27,sliceSize*28+diffSize) # 28th slice
 #array1 = np.load(filepath1)[0][region8] # full saved single run array, indexed by a region
 array1 = np.load(filepath1)[0] # full single run array
 #array1 = np.load(filepath12)[region3] # full merged file from run with 400 size pads
-array2 = np.load(filepath6) # full merged file from run with 400 size pads
+array1 = np.load(filepath18)
+array2 = np.load(filepath19)
+#array2 = np.load(filepath6) # full merged file from run with 400 size pads
 #array2 = np.load(filepath8)[0]   # test array to validate
 #array2 = np.load(filepath6)[region3] # load region 3 because this is a single slice
 array1unpad = array1[padSize:(len(array1)-padSize)] # remove pads from both arrays
