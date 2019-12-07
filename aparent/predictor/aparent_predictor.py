@@ -406,6 +406,16 @@ def find_polya_peaks_memoryFriendlyV2_LOUD(aparent_model, aparent_encoder, seq, 
 	return peak_ixs.tolist(), avg_cut_pred
 	
 
+#for running the peak finding seperately from the prediction of the whole chromosome values
+
+def find_peaks_ChromosomeVersion(avgPreds, peak_min_height, peak_min_distance, peak_prominence):
+	peaks, _ = find_peaks(avgPreds, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence) 
+	return peaks
+	
+#def smoothing_ChromosomeVersion(avgPreds):
+#	#smoothing signal before peak finding
+	
+
 #no padding version (reduces number operations)
 def find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, seq, fileStem, sequence_stride, output_size) :
     #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
@@ -486,14 +496,14 @@ def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_st
 
 	iso_pred_dict = {}
 	iso_pred_from_cuts_dict = {}
-
-	for peak_ix in peak_ixs :
-
+	#prdicts around each peak, then sums the prediction values around the peaks 
+	for peak_ix in peak_ixs : #For each peak
+		
 		iso_pred_dict[peak_ix] = []
 		iso_pred_from_cuts_dict[peak_ix] = []
 
-		if peak_ix > 75 and peak_ix < len(seq) - 150 :
-			for j in range(0, 30, sequence_stride) :
+		if peak_ix > 75 and peak_ix < len(seq) - 150 : #if peak is in [75, len(seq) - 150] for the sequence length
+			for j in range(0, 30, sequence_stride) : #slice around the peak location and make predictions
 				seq_slice = (('X' * 35) + seq + ('X' * 35))[peak_ix + 35 - 80 - j: peak_ix + 35 - 80 - j + 205]
 
 				if len(seq_slice) != 205 :
@@ -503,8 +513,14 @@ def score_polya_peaks(aparent_model, aparent_encoder, seq, peak_ixs, sequence_st
 
 				iso_pred_dict[peak_ix].append(iso_pred[0, 0])
 				iso_pred_from_cuts_dict[peak_ix].append(np.sum(cut_pred[0, 77: 107]))
-
-		if len(iso_pred_dict[peak_ix]) > 0 :
+		
+		#print ("PEAK: ", peak_ix)
+		#print ("Iso pred dict")
+		#print (iso_pred_dict[peak_ix])
+		#print ("iso pred from cuts dict")
+		#print (iso_pred_from_cuts_dict[peak_ix])
+		
+		if len(iso_pred_dict[peak_ix]) > 0 : #if multiple values exist for the peak 
 			iso_pred = np.mean(iso_pred_dict[peak_ix])
 			iso_pred_from_cuts = np.mean(iso_pred_from_cuts_dict[peak_ix])
 			if strided_agg_mode == 'max' :
