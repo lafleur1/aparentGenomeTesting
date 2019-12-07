@@ -30,8 +30,9 @@ aparent_encoder = get_aparent_encoder(lib_bias=4)
 #doing y, x and their RC's
 
 fastaDestination = "./fastas/"
-fastaNames = ["chrY", "chr22", "chr21"]
-stem = "chromosomePredictions/"
+fastaNames = ["chrY" , "chr22", "chr21"]
+#fastaNames = ["GL000225.1"]
+stem = "chromosomePredictions50/"
 
 for name in fastaNames:
 	contigSeq = SeqIO.read(fastaDestination + name + ".fasta", "fasta")
@@ -41,16 +42,32 @@ for name in fastaNames:
 	fileStem = stem + name
 	fileStemRC = stem + name + "RC"
 	print ("FORWARD")
-	files = find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, seq, fileStem, 10, 100000)
+	x,y = find_polya_peaks_memoryFriendlyV2_LOUD(
+                aparent_model,
+                aparent_encoder,
+                seq,
+                sequence_stride=15,
+                conv_smoothing=False,
+                peak_min_height=0.01,
+                peak_min_distance=50,
+                peak_prominence=(0.01, None),
+                counter = 500000
+            )
 	print ("REVERSE COMPLEMENT")
-	filesRC =  find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, rcseq, fileStemRC, 10, 100000)
-	binariesName = name + "binaries.txt"
-	fileKey = open(binariesName, "w")
-	for f in files:
-		fileKey.write(f + "\n")
-	for f2 in filesRC:
-		fileKey.write(f2 + "\n")
-	fileKey.close()
-
+	xRC,yRC = find_polya_peaks_memoryFriendlyV2_LOUD(
+                aparent_model,
+                aparent_encoder,
+                rcseq,
+                sequence_stride=15,
+                conv_smoothing=False,
+                peak_min_height=0.01,
+                peak_min_distance=50,
+                peak_prominence=(0.01, None),
+                counter = 500000
+            )
+	np.save(fileStem, y)
+	np.save(fileStemRC, yRC)
+	print ("FINISHED WITH : ", name)
+	
 
 

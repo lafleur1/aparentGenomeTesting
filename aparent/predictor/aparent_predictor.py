@@ -361,6 +361,51 @@ def find_polya_peaks_memoryFriendlyV2(aparent_model, aparent_encoder, seq, seque
 	return peak_ixs.tolist(), avg_cut_pred, sumMask
 
 
+
+#no padding version (reduces number operations)
+def find_polya_peaks_memoryFriendlyV2_LOUD(aparent_model, aparent_encoder, seq, sequence_stride=10, conv_smoothing=True, peak_min_height=0.01, peak_min_distance=50, peak_prominence=(0.01, None), counter = 100000) :
+    #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
+	sumCutPreds = np.zeros(len(seq))
+	sumMask = np.zeros(len(seq))
+    #set up stat/end position values for slicing sequence string
+	start_pos = 0
+	end_pos = 205
+	start_time = time.time()
+	len_seq = len(seq)
+	countCurrent = counter
+	while True :
+		seq_slice = ''
+		effective_len = 0
+		if end_pos <= len(seq) : #if the sequence is longer than 205 nts can slice w/o padding
+			seq_slice = seq[start_pos: end_pos]
+			#print (len(seq_slice))
+			effective_len = 205
+			if end_pos >= countCurrent:
+				print ("Finished with: ", countCurrent, " of ", len_seq, " ", "  Time elapsed: ", time.time()-start_time)
+				countCurrent = countCurrent + counter
+				start_time = time.time()
+		else : #if sequence is not longer than 205 nts cannot slice w/o padding
+			seq_slice = (seq[start_pos:] + ('X' * 200))[:205]
+			effective_len = len(seq[start_pos:])
+			print ("Last round")
+		#print (effective_len)
+		_, cut_pred = aparent_model.predict(x=aparent_encoder([seq_slice])) #predicts for the sequence slice just constructed
+		pred_removeLast = np.ravel(cut_pred)[:effective_len]
+		#print ( pred_removeLast.shape)
+		mask_removeLast = np.ones(effective_len)
+		#print (sumCutPreds[ effective_len].shape)
+		#print (pred_removeLast.shape)
+		sumCutPreds[start_pos : start_pos + effective_len] = sumCutPreds[start_pos : start_pos + effective_len] + pred_removeLast
+		sumMask[start_pos : start_pos + effective_len] = sumMask[start_pos : start_pos + effective_len] + mask_removeLast
+		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while
+			break
+		start_pos += sequence_stride
+		end_pos += sequence_stride
+	avg_cut_pred = sumCutPreds/sumMask
+	peak_ixs, _ = find_peaks(avg_cut_pred, height=peak_min_height, distance=peak_min_distance, prominence=peak_prominence)
+	return peak_ixs.tolist(), avg_cut_pred
+
+
 #no padding version (reduces number operations)
 def find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, seq, fileStem, sequence_stride, output_size) :
     #returns peaks found with scipy.signal find_peaks, and the average of the softmax predicted probability for that position in the sequence for every time it is predicted as the window slides along the sequence (this is why the total probability for the sequence being predicted does not add to 1)
@@ -395,20 +440,18 @@ def find_polya_peaks_memoryFriendlyV3(aparent_model, aparent_encoder, seq, fileS
 		sumMask[-effective_len:] = sumMask[-effective_len:] + mask_removeLast
 		#print (sumMask[-effective_len:])
 		#print ("buffer zone")
-
 		if end_pos >= len(seq) : #if done slicing the seq, we're finished. Break the while and export
-
 			#output final length of predictions
 			outAvg = sumCutPreds/sumMask
+			print (list(outAvg[-100:]))
 			print ("final shape: ", outAvg.shape)
 			print ("END POS: ", end_pos, " len(seq): ", len(seq))
 			name_current = fileStem + "_" + str(files_out) + "_" + str(output_size)
 			fileNames.append(name_current)
 			np.save(name_current, outAvg)
 			#print ("On final file: ", files_out, "time: ", time.time()-start_time)
-
 			break
-		start_pos += sequence_stride
+		start_pos += sequence_stride 
 		end_pos += sequence_stride
 		#increase length by stride for sumCutPreds and sumMask
 		sumCutPreds = np.concatenate((sumCutPreds, np.zeros(sequence_stride)), axis = 0)
