@@ -155,8 +155,8 @@ peak_prom = (0.01, None)
 iterations = {}
 largestF1 = float('-inf')
 bestSettings = ""
-fileNames = ["chr18", "chr19"]
-names = ["18", "19",]
+fileNames = ["chr21", "chr22"]
+names = ["21", "22"]
 minHeights = [0.01, 0.05, 0.1]
 tolerances = [0, 10, 20] #tolerances around clusters
 dists = [25, 50] #for peak finding algorithm #skip 0 because it's going to be bad runtime wise
@@ -204,8 +204,9 @@ for pasType in types:
 						dummyList.append((countTP,countFP,countFN))
 						#print ("For min peak height: ", minh, " TP: ", countTP, " FP: ", countFP, " FN: ", countFN)
 						#print ("-------------------------------------------------------------")
+						print ("tolerance: ", tolerance, " dist: ", dist, " minh: ", minh)
 				iterations[pasType][(tolerance,dist)].append(dummyList) #append list of TP, FP, FN for each chromosome examined
-				print ("tolerance: ", tolerance, " dist: ", dist, " minh: ", minh)
+				
 				#print (dummyList)
 				#print (iterations)
 	pasTypeTotals[pasType] = counterTypes
@@ -214,7 +215,7 @@ for pasType in types:
 	
 #making graphs
 for key in iterations.keys():
-	title = "PAS Type: " + key
+	title = "PAS Type: " + key + "2"
 	f = open(key + "ConfusionMatrices.txt", "w")
 	for setting in iterations[key].keys():
 		#setting is: tolerance around cluster, distance between peaks allowed
