@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from keras.utils import plot_model
 import time
-import copy
 
 from aparent.predictor import *
 ##################################################
@@ -156,11 +155,11 @@ peak_prom = (0.01, None)
 iterations = {}
 largestF1 = float('-inf')
 bestSettings = ""
-fileNames = ["chr18", "chr19", "chr21", "chr22", "chrY"]
-names = ["18",  "19", "21", "22", "Y"]
-minHeights = [0.01]
+fileNames = ["chrY"]
+names = ["Y"]
+minHeights = [0.01, 0.05, 0.1]
 tolerances = [0, 10, 20] #tolerances around clusters
-dists = [50] #for peak finding algorithm #skip 0 because it's going to be bad runtime wise
+dists = [25, 50] #for peak finding algorithm #skip 0 because it's going to be bad runtime wise
 peak_prom = (0.01, None)
 
 
@@ -184,7 +183,6 @@ for pasType in types:
 	for i, fname in enumerate(fileNames):
 		#add overall types to iterations:
 		forward, reverse = openForwardReverse(stem, fname)
-		f = open(names[i] + pasType + "ConfusionMatrices.txt", "w")
 		print ("-------------------------------------------------------------")
 		print ("Chromosome: ", names[i], " PAS Type: ", pasType)
 		print ("length: ", forward.shape)
@@ -198,34 +196,64 @@ for pasType in types:
 				dummyList = []
 				for minh in minHeights:
 					if minh != 0:
-						clustersForwardcopy = copy.deepcopy(clustersForward)
-						clustersRCcopy = copy.deepcopy(clustersRC)
 						forwardPeaks = find_peaks_ChromosomeVersion(forward, minh, dist, (0.01, None)) 
 						reversePeaks = find_peaks_ChromosomeVersion(reverse, minh, dist, (0.01, None)) 
-						print ("Number forward peaks: ", forwardPeaks.shape)
-						print ("Number forward peaks: ", reversePeaks.shape)
-						print ("Total peaks: ",  forwardPeaks.shape[0] + reversePeaks.shape[0])
-						clustersForTol = placePeaksWithTolerance(forwardPeaks, clustersForwardcopy, tolerance,  "+", forward.shape[0])	
-						clustersRCTol = placePeaksWithTolerance(reversePeaks, clustersRCcopy, tolerance,  "-", forward.shape[0])	
+						clustersForTol = placePeaksWithTolerance(forwardPeaks, clustersForward, tolerance,  "+", forward.shape[0])	
+						clustersRCTol = placePeaksWithTolerance(reversePeaks, clustersRC, tolerance,  "-", forward.shape[0])	
 						countTP, countFP, countFN = fillConfMatrix(clustersForTol, clustersRCTol)
-						print (countTP, countFP, countFN)
 						dummyList.append((countTP,countFP,countFN))
 						#print ("For min peak height: ", minh, " TP: ", countTP, " FP: ", countFP, " FN: ", countFN)
-						print ("tolerance: ", tolerance, " dist: ", dist, " minh: ", minh)
-						fileLine = "tolerance: " + str(tolerance) + " dist: " + str( dist) +  " minh: " + str(minh) + " TP: " + str(countTP) + " FP: " + str(countFP) + " FN: " + str(countFN) + "\n"
-						f.write(fileLine)
 						#print ("-------------------------------------------------------------")
+						print ("tolerance: ", tolerance, " dist: ", dist, " minh: ", minh)
 				iterations[pasType][(tolerance,dist)].append(dummyList) #append list of TP, FP, FN for each chromosome examined
+				
 				#print (dummyList)
 				#print (iterations)
-		f.close()
 	pasTypeTotals[pasType] = counterTypes
-
-for k in pasTypeTotals.keys():
-	print (k, " " , pasTypeTotals[k])
 	
 	
 	
+#making graphs
+for key in iterations.keys():
+	title = "PAS Type: " + key + "3"
+	f = open(key + "ConfusionMatrices.txt", "w")
+	for setting in iterations[key].keys():
+		#setting is: tolerance around cluster, distance between peaks allowed
+		tolerance = setting[0]
+		distance = setting[1]
+		lenDataPoints = len(iterations[key][setting][0])
+		summedTriples = []
+		for i in range(0, lenDataPoints):
+			summedTriples.append([0,0,0])
+		recalls = []
+		precisions = []
+		f1s = []
+		print ("key: ", key, " setting: ", setting)
+		print (iterations[key][setting])
+		for points in iterations[key][setting]: #for each list
+			for i in range(0,len(points)):
+				#for each triple
+				summedTriples[i][0] += points[i][0]
+				summedTriples[i][1] += points[i][1]
+				summedTriples[i][2] += 	points[i][2]
+			
+			#print (summedTriples)
+		print (summedTriples)
+		for triple in summedTriples:
+			prec, recall, f1score = calculatePrecisionRecall(triple[0], triple[1], triple[2])
+			recalls.append(recall)
+			precisions.append(prec)
+			f1s.append(f1score)
+			f.write( str(setting) + " " + str(triple) + "\n")
+		settingName = "Tolerance " + str(tolerance) + ", distance " + str(distance)
+		#plt.plot(recalls, precisions, label = settingName)
+	f.close()
+	#plt.title(title)
+	#plt.xlabel("Recall")
+	#plt.ylabel("Precision")
+	#plt.legend()
+	#plt.show()
+		
 			
 		
 
