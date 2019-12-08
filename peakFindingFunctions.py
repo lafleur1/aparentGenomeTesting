@@ -74,10 +74,19 @@ def fillConfMatrix(dictForward, dictRC):
 		else: #unplaced peaks
 			countFP += len(dictRC[key])
 	return countTP, countFP, countFN
-
+	
+def calculatePrecisionRecall(tp, fp, fn):
+	precision = tp / (tp + fp)
+	recall = tp / (tp + fn)
+	if tp == 0:
+		return precision, recall, None
+	else: 
+		f1 =  (2 * (precision * recall))/(precision + recall)
+	return precision, recall, f1
 
 def openForwardReverse(stem, name):
 	totalNameFor = stem + name + ".npy"
+	print (totalNameFor)
 	forward = np.load(totalNameFor)
 	reverse = np.load(stem + name + "RC.npy")
 	return forward, reverse
@@ -86,9 +95,11 @@ def openForwardReverse(stem, name):
 def openTrueValuesForType(name, pasType):
 	#opening all the true values from PolyASite2.0 
 	colnames = ["seqName",  "start" , "end",  "clusterID",  "avgTPM",  "strand",   "percentSupporting",   "protocolsSupporting",  "avgTPM2",   "type",   "upstreamClusters"]
-	pas_stuff =pd.read_csv('atlas.clusters.hg38.2-0.bed',delimiter='\t', names = colnames) 
+	pas_stuff =pd.read_csv('atlas.clusters.hg38.2-0.bed',delimiter='\t', names = colnames, dtype = {"seqName": str}) 
 	trueValBoolMask = pas_stuff['seqName'] == name
+	#print (name)
 	currentTrueVals = pas_stuff[trueValBoolMask] #filtered true vals
+	#print (currentTrueVals)
 	#set up true value array 
 	clustersForward = {}
 	clustersRC = {} #key of (Start, End) will use to track clusters with no peaks for the FN  
@@ -111,19 +122,10 @@ def openTrueValuesForType(name, pasType):
 				clustersRC[(row['start'], row['end'])] = []
 		clustersForward['Unplaced'] = []
 		clustersRC['Unplaced'] = []
-		
+	#print (clustersForward)	
 	return clustersForward, clustersRC
 
 
-stem = "./chromosomePredictions50/"
-name = "Y"
-nameStem = "chrY"
-min_height = 0.01
-heights = [0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08, 0.09, 0.1]
-tolerances = [0, 20]
-dists = [25,50,75]
-min_dist = 50
-peak_prom = (0.01, None)
 
 #https://stackoverflow.com/questions/1713335/peak-finding-algorithm-for-python-scipy
 #https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2631518/
@@ -141,26 +143,104 @@ peak_prom = (0.01, None)
 #
 
 #open forward and reverse predictions
-forward, reverse = openForwardReverse(stem, nameStem)
-types = ['All', 'IN', 'TE', 'IG', 'AI', 'EX', 'DS', 'AE', 'AU'] #for each type and subtype
 
+types = ['All', 'IN', 'TE', 'IG', 'AI', 'EX', 'DS', 'AE', 'AU'] #for each type and subtype
+tolerances = [0, 10, 20] #tolerances around clusters
+dists = [50] #for peak finding algorithm
+minHeights = np.linspace(0,1.0,20) #skip 0 because it's going to be bad runtime wise
+min_dist = 50
+peak_prom = (0.01, None)
+
+iterations = {}
+largestF1 = float('-inf')
+bestSettings = ""
+fileNames = ["chr18", "chr19"]
+names = ["18", "19"]
+minHeights = [0.01, 0.05, 0.1]
+tolerances = [0] #tolerances around clusters
+dists = [50] #for peak finding algorithm #skip 0 because it's going to be bad runtime wise
+peak_prom = (0.01, None)
+
+
+#dictionary set up
 for pasType in types:
-	print ("-------------------------------------------------------------")
-	print ("Chromosome: ", name, " PAS Type: ", pasType)
+	iterations[pasType] = {}
 	for tolerance in tolerances:
-		print ("with tolerance: ", tolerance)
-		clustersForward, clustersRC = openTrueValuesForType(name, pasType)
+		for dist in dists:
+			iterations[pasType][(tolerance,dist)] = []
+
+
+stem = "./chromosomePredictions50/"
+name = "Y"
+nameStem = "chrY"
+min_height = 0.01
+
+
+pasTypeTotals = {}
+for pasType in types:
+	counterTypes = 0
+	for i, fname in enumerate(fileNames):
+		#add overall types to iterations:
+		forward, reverse = openForwardReverse(stem, fname)
+		print ("-------------------------------------------------------------")
+		print ("Chromosome: ", names[i], " PAS Type: ", pasType)
+		print ("length: ", forward.shape)
+		clustersForward, clustersRC = openTrueValuesForType(names[i], pasType)
 		print ("Forward size: ", len(clustersForward.keys()) - 1)
 		print ("Reverse size: ", len(clustersRC.keys()) -1 )
 		print ("All signals: ", len(clustersForward.keys()) + len(clustersRC.keys())- 2)
-		forwardPeaks = find_peaks_ChromosomeVersion(forward, 0.01, 50, (0.01, None)) #tested 
-		reversePeaks = find_peaks_ChromosomeVersion(reverse, 0.01, 50, (0.01, None)) #tested 
-		clustersForTol = placePeaksWithTolerance(forwardPeaks, clustersForward, tolerance,  "+", forward.shape[0])	
-		clustersRCTol = placePeaksWithTolerance(reversePeaks, clustersRC, tolerance,  "-", forward.shape[0])	
-		countTP, countFP, countFN = fillConfMatrix(clustersForTol, clustersRCTol)
-		print ("TP: ", countTP, " FP: ", countFP, " FN: ", countFN)
-		print ("-------------------------------------------------------------")
+		counterTypes += len(clustersForward.keys()) + len(clustersRC.keys())- 2
+		for tolerance in tolerances:
+			for dist in dists:
+				dummyList = []
+				for minh in minHeights:
+					if minh != 0:
+						forwardPeaks = find_peaks_ChromosomeVersion(forward, minh, dist, (0.01, None)) 
+						reversePeaks = find_peaks_ChromosomeVersion(reverse, minh, dist, (0.01, None)) 
+						clustersForTol = placePeaksWithTolerance(forwardPeaks, clustersForward, tolerance,  "+", forward.shape[0])	
+						clustersRCTol = placePeaksWithTolerance(reversePeaks, clustersRC, tolerance,  "-", forward.shape[0])	
+						countTP, countFP, countFN = fillConfMatrix(clustersForTol, clustersRCTol)
+						dummyList.append((countTP,countFP,countFN))
+						#print ("For min peak height: ", minh, " TP: ", countTP, " FP: ", countFP, " FN: ", countFN)
+						#print ("-------------------------------------------------------------")
+				iterations[pasType][(tolerance,dist)].append(dummyList) #append list of TP, FP, FN for each chromosome examined
+	pasTypeTotals[pasType] = counterTypes
 	
+	
+	
+#making graphs
+for key in iterations.keys():
+	title = "PAS Type: " + key
+	f = open(key + "ConfusionMatrices.txt", "w")
+	for setting in iterations[key].keys():
+		#setting is: tolerance around cluster, distance between peaks allowed
+		tolerance = setting[0]
+		distance = setting[1]
+		lenDataPoints = len(iterations[key][setting][0])
+		summedTriples = lenDataPoints * [(0,0,0)]
+		for points in iterations[key][setting]: #for each list
+			for i, triple in enumerate(points):
+				summedTriples[i][0] += triple[0]
+				summedTriples[i][1] += triple[1]
+				summedTriples[i][2] += triple[2]	
+		for triple in summedTriples:
+			prec, recall, f1score = calculatePrecisionRecall(triple[0], triple[1], triple[2])
+			recalls.append(recall)
+			precisions.append(prec)
+			f1s.append(f1score)
+			f.write( str(setting) + " " + str(triple) + "\n")
+		settingName = "Tolerance " + str(tolerance) + ", distance " + str(distance)
+		plt.plot(recalls, precisions, label = settingName)
+	f.close()
+	plt.title(title)
+	plt.xlabel("Recall")
+	plt.ylabel("Precision")
+	plt.legend()
+	plt.show()
+		
+			
+		
+
 
 
 
