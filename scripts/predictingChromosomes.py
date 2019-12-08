@@ -66,7 +66,7 @@ padSize = 400 # arbitrarily chosen large pad size to make sure we have enough ro
 fileSize = sliceSize + padSize*2 # file size before merging; put one pad on each size which we can slice off at end
 parallelFlag = 0 # set to 1 for doing multiprocessing, 0 for single thread
 mergeFlag = 1 # 0 for skip merge, 1 for predict and merge, 2 for just merge
-reverseCompFlag = 0 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
+reverseCompFlag = 1 # 0 for processing sequence in order saved in fasta file, 1 for flipping to reverse complement
 
 # logging initial details about run
 logPrint('Logging ' + os.path.basename(__file__)) #predictingChromosomes.py')
