@@ -1,0 +1,3 @@
+tolerance: 0 dist: 50 minh: 0.01 TP: 2337 FP: 482660 FN: 3029
+tolerance: 10 dist: 50 minh: 0.01 TP: 2850 FP: 482147 FN: 2517
+tolerance: 20 dist: 50 minh: 0.01 TP: 2963 FP: 482034 FN: 2409
